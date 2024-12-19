@@ -83,28 +83,32 @@ magnitude_list = []
 x_data = []
 
 frame_idx = last_frame_processed(output_csv_path)
-
+THRESHOLD_MULTIPLIER = 1.5
 with open(output_csv_path, 'a', newline='') as file:
-    writer = csv.writer(file)
-    if frame_idx == -1:
-        print("Creating new file...")
-        writer.writerow(["Frame_index", "totalMotion", "avgMotion"])
-        frame_idx = 0
-    else:
-        frame_idx += 1
-
-    for i in range(frame_idx, len(frame_files) - 1):
-        frame = cv2.imread(frame_files[i])
-        next_frame = cv2.imread(frame_files[i + 1])
-        frame = cv2.GaussianBlur(frame, (3, 3), 0)
-        next_frame = cv2.GaussianBlur(next_frame, (3, 3), 0)
-        result = estimator(frame, next_frame)
-        u = result[..., 0]
-        v = result[..., 1]
-        magnitude = np.sqrt(u**2 + v**2)
-        average_motion = np.mean(magnitude)
-        total_motion = np.sum(magnitude)
-        writer.writerow([i, total_motion, average_motion])
+	writer = csv.writer(file)
+	if frame_idx == -1:
+		print("Creating new file...")
+		writer.writerow(["Frame_index", "totalMotion", "avgMotion"])
+		frame_idx = 0
+	else:
+        	frame_idx += 1
+	for i in range(frame_idx, len(frame_files) - 1):
+		frame = cv2.imread(frame_files[i])
+		next_frame = cv2.imread(frame_files[i + 1])
+		frame = cv2.GaussianBlur(frame, (3, 3), 0)
+		next_frame = cv2.GaussianBlur(next_frame, (3, 3), 0)
+		result = estimator(frame, next_frame)
+		u = result[..., 0]
+		v = result[..., 1]
+		magnitude = np.sqrt(u**2 + v**2)
+		average_motion = np.mean(magnitude)
+		threshold = THRESHOLD_MULTIPLIER * average_motion
+		magnitude_thresholded = np.where(magnitude > threshold, magnitude, 0)
+		# Calculate total and average motion after thresholding
+		total_motion = np.sum(magnitude_thresholded)
+		avg_motion = np.mean(magnitude_thresholded[magnitude_thresholded > 0]) if np.any(magnitude_thresholded > 0) else 0
+        	#total_motion = np.sum(magnitude)
+		writer.writerow([i, total_motion, avg_motion])
 
 # Step 4: Plot normalized motion
 motion_data = pd.read_csv(output_csv_path)

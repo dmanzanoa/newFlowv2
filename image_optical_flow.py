@@ -66,6 +66,7 @@ fps = int(cap.get(cv2.CAP_PROP_FPS))
 aspect_ratio = frame_width / frame_height
 target_video_height = int(target_video_width / aspect_ratio)
 
+<<<<<<< HEAD
 # Initialize VideoWriter for output
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out = cv2.VideoWriter(output_video_path, fourcc, fps, (target_video_width, target_video_height))
@@ -154,6 +155,55 @@ min_val = scaled_avg_motion.min()
 max_val = scaled_avg_motion.max()
 motion_data["Normalized Motion"] = (scaled_avg_motion - min_val) / (max_val - min_val)
 motion_data.to_csv(output_normalized_csv_path, index=False)
+=======
+frame_idx = last_frame_processed(output_csv_path)
+THRESHOLD_MULTIPLIER = 1.5
+with open(output_csv_path, 'a', newline='') as file:
+	writer = csv.writer(file)
+	if frame_idx == -1:
+		print("Creating new file...")
+		writer.writerow(["Frame_index", "totalMotion", "avgMotion"])
+		frame_idx = 0
+	else:
+        	frame_idx += 1
+	for i in range(frame_idx, len(frame_files) - 1):
+		frame = cv2.imread(frame_files[i])
+		next_frame = cv2.imread(frame_files[i + 1])
+		frame = cv2.GaussianBlur(frame, (3, 3), 0)
+		next_frame = cv2.GaussianBlur(next_frame, (3, 3), 0)
+		result = estimator(frame, next_frame)
+		u = result[..., 0]
+		v = result[..., 1]
+		magnitude = np.sqrt(u**2 + v**2)
+		average_motion = np.mean(magnitude)
+		threshold = THRESHOLD_MULTIPLIER * average_motion
+		magnitude_thresholded = np.where(magnitude > threshold, magnitude, 0)
+		# Calculate total and average motion after thresholding
+		total_motion = np.sum(magnitude_thresholded)
+		avg_motion = np.mean(magnitude_thresholded[magnitude_thresholded > 0]) if np.any(magnitude_thresholded > 0) else 0
+        	#total_motion = np.sum(magnitude)
+		writer.writerow([i, total_motion, avg_motion])
+
+# Step 4: Plot normalized motion
+motion_data = pd.read_csv(output_csv_path)
+x_data = motion_data['Frame_index'].tolist()
+avg_motion = motion_data['avgMotion'].tolist()
+
+# Normalize motion data
+scaled_avg_motion = [val**2 for val in avg_motion]
+min_val = min(scaled_avg_motion)
+max_val = max(scaled_avg_motion)
+normalized_motion = [(val - min_val) / (max_val - min_val) if max_val != min_val else 0 for val in scaled_avg_motion]
+
+# Save normalized data
+plot_data = pd.DataFrame({
+    'Frame Index': x_data,
+    'Normalized Motion': normalized_motion
+})
+
+output_normalized_csv_path = os.path.join(folder_name, "normalized_data.csv")
+plot_data.to_csv(output_normalized_csv_path, index=False)
+>>>>>>> 1c359b51d43fe4b22542e543e875e9dc27d4aba9
 
 print(f"Motion data saved to {output_csv_path}")
 print(f"Normalized motion data saved to {output_normalized_csv_path}")

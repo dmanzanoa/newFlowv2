@@ -1,4 +1,4 @@
-# NeuFlow v2: Dockerized Video Processing Pipeline
+# NeuFlow v2: Dockerized Video Processing Code
 
 This repository provides a Dockerized solution for running the NeuFlow v2 video processing pipeline. Follow the instructions below to set up and run the pipeline.
 

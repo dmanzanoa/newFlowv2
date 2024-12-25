@@ -66,8 +66,9 @@ To copy these files to your local machine, use the following commands:
         The video includes frame numbers displayed in the upper-left corner, synchronized with the CSV output.
 
     Normalized Data (normalized_data.csv):
-        Total Motion: Sum of magnitudes per frame.
-        Average Motion: Average magnitude per frame.
-        Maximum Motion: Maximum magnitude per frame.
+        Frame_index: frame id.
+        raw_magnitude_total: Sum of magnitudes per frame.
+        raw_avg_magnitude: Average magnitude per frame.
+        raw_max_magnitude: Maximum magnitude per frame.
+        Normalized Total Motion: The total raw magnitude, normalized for further integration and use.
 
-These outputs provide a comprehensive analysis of motion dynamics within the video.

@@ -139,9 +139,6 @@ while True:
     # Update the previous frame
     prev_frame_tensor = curr_frame_tensor
 
-    frame_idx += 1
-    if(frame_idx >= 10):
-        break
 
 # Write motion data to CSV
 with open(output_csv_path, 'a', newline='') as file:

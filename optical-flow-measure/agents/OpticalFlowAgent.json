@@ -1,0 +1,61 @@
+{
+  "version": 0,
+  "name": "OpticalFlowAgent",
+  "runtime": "python",
+  "graph": [
+    "(Source OpticalFlowMeasure)"
+  ],
+  "elements": [
+    {
+      "name": "Source",
+      "parameters": {
+        "source_inputs": [],
+        "read_stdin": false
+      },
+      "input": [
+        {
+          "name": "data_files",
+          "type": "List[DataFile]"
+        },
+        {
+          "name": "entities",
+          "type": "List[Dict[UUID, Entity]]"
+        }
+      ],
+      "output": [
+        {
+          "name": "data_files",
+          "type": "List[DataFile]"
+        },
+        {
+          "name": "entities",
+          "type": "List[Dict[UUID, Entity]]"
+        }
+      ],
+      "deploy": {
+        "local": {
+          "class_name": "VideoDataSource",
+          "module": "highlighter.agent.capabilities"
+        }
+      }
+    },
+    {
+      "name": "OpticalFlowMeasure",
+      "parameters": {
+      },
+      "input": [
+        {
+          "name": "data_files",
+          "type": "List[DataFile]"
+        }
+      ],
+      "output": [
+      ],
+      "deploy": {
+        "local": {
+          "module": "optical-flow-measure.capabilities"
+        }
+      }
+    }
+  ]
+}

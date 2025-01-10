@@ -1,0 +1,96 @@
+[project]
+name = "optical-flow-measure"
+version =  "0.1"
+readme = "README.md"
+description = "The system computes pixel-level motion vectors between consecutive video frames."
+requires-python = ">=3.10,<3.12"
+
+keywords = [
+  "enterprise perception system"
+]
+
+# See: https://pypi.org/classifiers/
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: Unix",
+    "Intended Audience :: Developers",
+]
+
+authors = [
+{name = "Daniel", email = "dmanzanoagua@silverpond.com.au"},
+]
+
+
+dependencies = [
+  "aiko_services>=0.6",
+  "highlighter-sdk>=2.4.73",
+]
+
+[tool.setuptools.packages.find]
+where = ["src/optical-flow-measure"]
+include = ["optical-flow-measure"]
+
+
+[tool.hatch.envs.default]
+dependencies = [
+  "pytest~=8.0",
+  "twine",
+  "black>=19.10b0",
+  "pylint~=2.6",
+  "wrapt",  # needed due to error in pylint
+  "nbstripout",
+  "isort~=5.0",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest {args:tests}"
+
+check = [
+  #"flake8 .",
+  "black --config pyproject.toml --check . || (echo \"Black formatting check failed\"; exit 1)",
+  "isort --check-only --diff . || (echo \"isort check failed\"; exit 1)",
+  "echo highlighter-sdk formatting checks passed!",
+  ]
+
+# Run formatting
+# hatch run fmt:fmt
+fmt = [
+  "isort --cr . --resolve-all-configs --overwrite-in-place . ",
+  "black --config pyproject.toml .",
+  "nbstripout notebooks/*",
+  "check",
+  ]
+
+[tool.hatch]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 110
+target-version = ['py310']
+
+# https://hatch.pypa.io/latest/config/build/#build-targets
+[tool.hatch.build.targets.wheel]
+packages = ["src/optical-flow-measure"]
+exclude = [
+  "dist/",
+  "venv/",
+  "hl/",
+  "docs/",
+]
+
+[tool.hatch.build.targets.sdist]
+packages = ["src/optical-flow-measure"]
+exclude = [
+  "dist/",
+  "venv/",
+  "hl/",
+  "docs/",
+]
+

@@ -53,7 +53,7 @@
       ],
       "deploy": {
         "local": {
-          "module": "optical-flow-measure.capabilities"
+          "module": "optical_flow_measure.capabilities"
         }
       }
     }

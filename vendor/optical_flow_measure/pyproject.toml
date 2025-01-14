@@ -1,5 +1,5 @@
 [project]
-name = "optical-flow-measure"
+name = "optical_flow_measure"
 version =  "0.1"
 readme = "README.md"
 description = "The system computes pixel-level motion vectors between consecutive video frames."
@@ -26,11 +26,12 @@ authors = [
 dependencies = [
   "aiko_services>=0.6",
   "highlighter-sdk>=2.4.73",
+  "optical_flow_measure @ file:./vendor/optical_flow_measure",
 ]
 
 [tool.setuptools.packages.find]
-where = ["src/optical-flow-measure"]
-include = ["optical-flow-measure"]
+where = ["src/optical_flow_measure"]
+include = ["optical_flow_measure"]
 
 
 [tool.hatch.envs.default]
@@ -77,7 +78,7 @@ target-version = ['py310']
 
 # https://hatch.pypa.io/latest/config/build/#build-targets
 [tool.hatch.build.targets.wheel]
-packages = ["src/optical-flow-measure"]
+packages = ["src/optical_flow_measure"]
 exclude = [
   "dist/",
   "venv/",
@@ -86,7 +87,7 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.sdist]
-packages = ["src/optical-flow-measure"]
+packages = ["src/optical_flow_measure"]
 exclude = [
   "dist/",
   "venv/",
@@ -94,3 +95,5 @@ exclude = [
   "docs/",
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true

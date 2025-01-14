@@ -16,11 +16,11 @@ import torchvision.transforms as T
 import sys
 
 # Compute project root by moving up several levels for ONNX model in github report.
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
-sys.path.append(project_root)
+#current_dir = os.path.dirname(os.path.abspath(__file__))
+#project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
+#sys.path.append(project_root)
 # Append the NeuFlow path dynamically
-default_model_path = os.path.join(project_root,"models", "neuflow_sintel.onnx")
+#default_model_path = os.path.join(project_root,"models", "neuflow_sintel.onnx")
 from neuflowv2 import NeuFlowV2
 
 __all__ = ["OpticalFlowMeasure"]
@@ -34,7 +34,7 @@ class OpticalFlowMeasure(Capability):
     def __init__(self, context):
         context.get_implementation("PipelineElement").__init__(self, context)
         super().__init__(context)
-        model_path = getattr(context, "model_path", default_model_path)
+        model_path = getattr(context, "model_path", "neuflow_sintel.onnx")
         self.estimator = NeuFlowV2(model_path)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.preprocess_frame = T.Compose([

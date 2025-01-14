@@ -20,8 +20,7 @@ RUN apt-get update && apt-get install -y \
 # Install pip for Python 3.11
 RUN wget https://bootstrap.pypa.io/get-pip.py && python3.11 get-pip.py && rm get-pip.py
 
-# Install PyTorch and other Python dependencies for Python 3.11
-# Install other Python dependencies for Python 3.11
+# Install Python dependencies
 RUN python3.11 -m pip install --no-cache-dir \
     onnxruntime-gpu==1.20.0 \
     pandas \
@@ -33,16 +32,17 @@ RUN python3.11 -m pip install --no-cache-dir \
     "numpy<2" \
     torchvision \
     requests
-    
 
 # Add NVIDIA repository for TensorRT
 RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb && \
     dpkg -i cuda-keyring_1.1-1_all.deb && \
     apt-get update
 
-# Clone the repository
-RUN git clone https://github.com/dmanzanoa/newFlowv2.git /workspace/NeuFlow_v2-Pytorch-Inference
+# Copy local repository into the container
+COPY . /workspace/NeuFlow_v2-Pytorch-Inference
 
 # Set the working directory
 WORKDIR /workspace/NeuFlow_v2-Pytorch-Inference
 
+# Install the project as a package
+RUN python3.11 -m pip install -U pip && python3.11 -m pip install -e .

@@ -14,13 +14,6 @@ import csv
 import pandas as pd
 import torchvision.transforms as T
 import sys
-
-# Compute project root by moving up several levels for ONNX model in github report.
-#current_dir = os.path.dirname(os.path.abspath(__file__))
-#project_root = os.path.abspath(os.path.join(current_dir, "../../../.."))
-#sys.path.append(project_root)
-# Append the NeuFlow path dynamically
-#default_model_path = os.path.join(project_root,"models", "neuflow_sintel.onnx")
 from neuflowv2 import NeuFlowV2
 
 __all__ = ["OpticalFlowMeasure"]

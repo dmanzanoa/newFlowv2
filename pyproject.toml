@@ -13,7 +13,8 @@ authors = [
 ]
 dependencies = [
     "opencv-python",
-    "onnxruntime-gpu==1.20.0"
+    "onnxruntime-gpu==1.20.0",
+    "optical_flow_measure @ file:./vendor/optical_flow_measure"
 ]
 
 [tool.setuptools.packages.find]

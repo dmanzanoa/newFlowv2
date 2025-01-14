@@ -26,7 +26,7 @@ authors = [
 dependencies = [
   "aiko_services>=0.6",
   "highlighter-sdk>=2.4.73",
-  "optical_flow_measure @ file:./vendor/optical_flow_measure",
+  "optical_flow_measure",
 ]
 
 [tool.setuptools.packages.find]

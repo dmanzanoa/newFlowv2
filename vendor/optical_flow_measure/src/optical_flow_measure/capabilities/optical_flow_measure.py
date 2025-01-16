@@ -33,8 +33,7 @@ class OpticalFlowMeasure(Capability):
         self.preprocess_frame = T.Compose([
             T.ToTensor(),
             T.ConvertImageDtype(torch.float32),
-            T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
-            T.Resize((224, 224))
+            T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         ])
         self.frame_idx = 0
 
@@ -56,15 +55,17 @@ class OpticalFlowMeasure(Capability):
             if self.frame_idx == 0:
                 self.prev_frame_tensor = frame_tensor
                 self.frame_idx += 1
-                continue
+                return StreamEvent.OKAY, {"optical_motion_vector": 0.0}
 
             prev_frame_np = (self.prev_frame_tensor.cpu().permute(1, 2, 0).numpy() * 255.0).astype(np.uint8)
             curr_frame_np = (frame_tensor.cpu().permute(1, 2, 0).numpy() * 255.0).astype(np.uint8)
 
             result = self.estimator(prev_frame_np, curr_frame_np)
-            result_array = np.array(result)
-            result_resized = cv2.resize(result_array, (frame.shape[1], frame.shape[0]))
+            u, v = result[..., 0], result[..., 1]
+            magnitude = np.sqrt(u**2 + v**2)
+            raw_magnitude_sum = np.sum(magnitude)
+
             self.prev_frame_tensor = frame_tensor
             self.frame_idx += 1
 
-        return StreamEvent.OKAY, {"optical_motion_vector": result_resized}
+        return StreamEvent.OKAY, {"optical_motion_vector": raw_magnitude_sum}

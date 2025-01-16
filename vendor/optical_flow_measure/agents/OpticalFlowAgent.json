@@ -52,7 +52,7 @@
       "output": [
 	      {
 	        "name": "optical_motion_vector",
-          	"type": "numpy_array"
+          	"type": "float"
 	      }
       ],
       "deploy": {

@@ -52,7 +52,7 @@
       "output": [
 	      {
 	        "name": "entities",
-          "type": "Entities"
+          	"type": "Entities"
 	      }
       ],
       "deploy": {

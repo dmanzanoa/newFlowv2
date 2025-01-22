@@ -51,8 +51,8 @@
       ],
       "output": [
 	      {
-	        "name": "optical_motion_vector",
-          	"type": "numpy_array"
+	        "name": "entities",
+          "type": "Entities"
 	      }
       ],
       "deploy": {

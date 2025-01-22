@@ -23,7 +23,7 @@ docker run --gpus all -it neuflowv2
 ### Step 4: Move to vendor/optical_flow_measure/ folder
 
 ```bash
-cdvendor/optical_flow_measure/
+cd vendor/optical_flow_measure/
 ```
 
 ### Step 5: Excute the agent

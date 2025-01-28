@@ -215,7 +215,7 @@ class OpticalFlowMeasure(Capability):
         )
         entities[motion_entity.id] = motion_entity
         return entities
- 
+
     def stop_stream(self, stream, stream_id) -> Tuple[StreamEvent, Dict[str, Any]]:
         """
         Stop the stream and reset the state.

@@ -1,5 +1,4 @@
 from typing import List, Tuple, Dict, Any, Optional
-from typing import Union, List
 from uuid import uuid4
 from highlighter.core import LabeledUUID
 from highlighter.agent.capabilities import Capability, StreamEvent
@@ -19,37 +18,18 @@ import numpy as np
 from torchvision import transforms
 from datetime import datetime, timedelta
 import torchvision.transforms as T 
-import torch
 from highlighter.client import HLClient
-
-"""
-OpticalFlowMeasure
-
-This module implements a capability to process video streams and analyze optical flow between two consecutive frames using a 
-NeuFlowV2 model.
-It calculates motion vectors, horizontal and vertical (H,W,2), and creates entities that had movement measure for each frame.
-
-Key Functions:
-- __init__: Initializes the capability, setting up the processing device, preprocessing pipeline, and loading the NeuFlowV2 model.
-- load_model: Static method to load the optical flow model (NeuFlowV2) using a specified path from the context.
-- start_stream: Prepares the stream for processing, initializes object class configurations for inference, and validates their presence.
-- process_frame: Processes each frame in the video stream, calculating motion magnitude using optical flow and returning results.
-- stop_stream: Cleans up resources after the stream ends (implementation placeholder).
-- entities_for_object_class: Generates entities based on optical flow results.
-- create_motion_entity: Create a motion entity with the amount of movement in a video stream.
-"""
-
 
 __all__ = ["OpticalFlowMeasure"]
 
 ATTRIBUTE_UUID = LabeledUUID(int=2, label="response")
 
 class OpticalFlowMeasure(Capability):
-    """Does something cool
-    """
+    """Does something cool"""
 
     class DefaultStreamParameters(Capability.DefaultStreamParameters):
         pass
+
     def __init__(self, context):
         """
         Initialize the OpticalFlowMeasure capability.
@@ -84,7 +64,6 @@ class OpticalFlowMeasure(Capability):
             The loaded NeuFlowV2 model instance.
         """
         model_path = getattr(context, "model_path", "neuflow_sintel.onnx")
-        # Assume NeuFlowV2 is the estimator class from an imported module
         from neuflowv2 import NeuFlowV2
         return NeuFlowV2(model_path)
 
@@ -164,39 +143,18 @@ class OpticalFlowMeasure(Capability):
         u, v = result[..., 0], result[..., 1]
         magnitude = np.sqrt(u**2 + v**2)
         motion_magnitude = np.sum(magnitude)
-        for object_class_value in self.object_classes_for_inference.values():
-            frame_entities = self.entities_for_object_class(
-                motion_magnitude,
-                object_class_value["inference_index"],
-                stream,
-                object_class_value["uuid"]
-            )
         
-        entities.update(frame_entities)
+        for object_class_value in self.object_classes_for_inference.values():
+            frame_entities = self.create_motion_entity(
+                stream, motion_magnitude, object_class_value["uuid"]
+            )
+            entities.update(frame_entities)
+
 
         self.prev_frame_tensor = frame_tensor
         self.frame_idx += 1
 
         return StreamEvent.OKAY, {"entities": entities}
-
-    def entities_for_object_class(self, motion_magnitude, output_idx, stream, object_class_uuid):
-        """
-        Generate entities based on motion magnitude for a specific object class.
-
-        Args:
-            motion_magnitude: The calculated magnitude of motion.
-            output_idx: The index of the output in the inference model (Just Chicken).
-            stream: The video stream object.
-            object_class_uuid: The unique identifier for the object class.
-
-        Returns:
-            A dictionary of generated entities.
-        """
-
-        entities = self.create_motion_entity(
-            stream, motion_magnitude, object_class_uuid
-        )
-        return entities
 
     def create_motion_entity(self, stream, motion_magnitude, object_class_uuid):
         """
@@ -238,8 +196,6 @@ class OpticalFlowMeasure(Capability):
 
         self.frame_id_of_last_detection[object_class_uuid] = stream.frame_id
         
-        #motion_entity = Entity(id=entity_id)
-
         annotation = Annotation(
             id=annotation_id,
             datum_source=DatumSource(frame_id=stream.frame_id, confidence=motion_magnitude),
@@ -258,7 +214,6 @@ class OpticalFlowMeasure(Capability):
             )
         )
         entities[motion_entity.id] = motion_entity
-
         return entities
  
     def stop_stream(self, stream, stream_id) -> Tuple[StreamEvent, Dict[str, Any]]:

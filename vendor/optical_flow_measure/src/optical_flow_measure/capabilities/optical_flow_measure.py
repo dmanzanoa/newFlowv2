@@ -12,6 +12,10 @@ from highlighter.client.base_models import (
 from highlighter.core import paginate
 from highlighter import OBJECT_CLASS_ATTRIBUTE_UUID
 from highlighter.client import DataFile
+from pydantic import BaseModel
+from shapely.geometry import Point
+from uuid import UUID
+
 import torch
 import cv2
 import numpy as np
@@ -146,7 +150,7 @@ class OpticalFlowMeasure(Capability):
         
         for object_class_value in self.object_classes_for_inference.values():
             frame_entities = self.create_motion_entity(
-                stream, motion_magnitude, object_class_value["uuid"]
+                stream, motion_magnitude, object_class_value["uuid"], data_files
             )
             entities.update(frame_entities)
 
@@ -154,9 +158,40 @@ class OpticalFlowMeasure(Capability):
         self.prev_frame_tensor = frame_tensor
         self.frame_idx += 1
 
+        self.create_submission_from_entities(entities, [data_file.file_id for data_file in data_files], 'f4583372-5fc7-44ea-b1f9-30351cbf540c')
+
         return StreamEvent.OKAY, {"entities": entities}
 
-    def create_motion_entity(self, stream, motion_magnitude, object_class_uuid):
+    def create_submission_from_entities(
+        self,
+        entities: Dict[UUID, Entity],
+        data_file_ids: List[UUID],
+        task_id: Optional[UUID],
+    ):
+        annotations_attributes = []
+        eavt_attributes = []
+        for entity in entities.values():
+            for annotation in entity.annotations:
+                annotations_attributes.append(annotation.gql_dict())
+                for eavt in annotation.observations:
+                    eavt_attributes.append({**eavt.gql_dict(),
+                                            "annotationUuid": str(annotation.id)})
+            for eavt in entity.global_observations:
+                eavt_attributes.append(eavt.gql_dict())
+
+        result = self.client.createSubmission(
+            return_type=CreateSubmissionPayload,
+            imageUuid=str(data_file_ids[0]),
+            status="completed",
+            taskId=str(task_id),
+            annotationsAttributes=annotations_attributes,
+            eavtAttributes=eavt_attributes,
+            dataFileIds=[str(id) for id in data_file_ids],
+        )
+        if len(result.errors) > 0:
+            raise ValueError(f"GraphQL Error: {result.errors}")
+
+    def create_motion_entity(self, stream, motion_magnitude, object_class_uuid, data_files):
         """
         Create a motion entity with the amount of movement in a video stream.
 
@@ -196,10 +231,14 @@ class OpticalFlowMeasure(Capability):
 
         self.frame_id_of_last_detection[object_class_uuid] = stream.frame_id
         
+        point = Point(0, 0)
+
         annotation = Annotation(
             id=annotation_id,
             datum_source=DatumSource(frame_id=stream.frame_id, confidence=motion_magnitude),
-            track_id=self.track_ids[object_class_uuid] 
+            track_id=self.track_ids[object_class_uuid],
+            location=point,
+            data_file_id=data_files[0].file_id
         )
         motion_entity.annotations.add(annotation)
 
@@ -210,7 +249,7 @@ class OpticalFlowMeasure(Capability):
                 entity_id=self.entity_ids[object_class_uuid],
                 attribute_id=object_class_attr_id,  
                 value=object_class_uuid,
-                datum_source=DatumSource(frame_id=stream.frame_id, confidence=motion_magnitude),
+                datum_source=DatumSource(frame_id=stream.frame_id, confidence=motion_magnitude, host_id='', pipeline_element_name='', training_run_id=0),
             )
         )
         entities[motion_entity.id] = motion_entity
@@ -229,3 +268,6 @@ class OpticalFlowMeasure(Capability):
         print(value)
         with open("debug.txt", "w") as file:
             file.write(value)
+
+class CreateSubmissionPayload(BaseModel):
+    errors: List[str]

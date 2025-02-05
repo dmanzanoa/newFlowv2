@@ -18,7 +18,7 @@ docker build -t neuflowv2 .
 Once the image is built, run the container using:
 
 ```bash
-docker run --gpus all -it neuflowv2
+docker run --device=nvidia.com/gpu=all -it neuflowv2
 ```
 ### Step 4: Move to vendor/optical_flow_measure/ folder
 
@@ -26,7 +26,13 @@ docker run --gpus all -it neuflowv2
 cd vendor/optical_flow_measure/
 ```
 
-### Step 5: Excute the agent
+### Step 5: Set API environment variables
+
+
+### Step 6: Make sure Highlighter account has object class
+
+
+### Step 7: Excute the agent
 
 ```bash
 hl agent run agents/OpticalFlowAgent.json -f inputs/test.mp4

@@ -25,7 +25,7 @@ authors = [
 
 dependencies = [
   "aiko_services>=0.6",
-  "highlighter-sdk @ file:///source/sdk"
+  "highlighter-sdk==2.4.74"
 ]
 
 

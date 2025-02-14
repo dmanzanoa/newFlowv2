@@ -9,6 +9,8 @@ from highlighter.client.base_models import (
     ObjectClassTypeConnection,
     DatumSource,
 )
+from datetime import datetime
+from highlighter.client.tasks import TaskStatus, update_task_status
 from highlighter.core import paginate
 from highlighter import OBJECT_CLASS_ATTRIBUTE_UUID
 from highlighter.client import DataFile
@@ -18,11 +20,14 @@ from uuid import UUID
 
 import torch
 import cv2
+import highlighter as hl
 import numpy as np
-from torchvision import transforms
-from datetime import datetime, timedelta
 import torchvision.transforms as T 
-from highlighter.client import HLClient
+from highlighter.client import EAVT, HLClient
+from ..observation_aggregator import (
+    ObservationAggregator,
+)
+from ..observation_writer import FileAvroObservationWriter, S3AvroObservationWriter
 
 __all__ = ["OpticalFlowMeasure"]
 
@@ -51,9 +56,17 @@ class OpticalFlowMeasure(Capability):
             T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         ])
         self.frame_idx = 0
-        self.entities = {}
         self.estimator = self.load_model(context)
         self.frame_id_of_last_detection = {}
+
+        self.submission_strategy = 'avro'
+
+        match self.submission_strategy:
+            case 'legacy':
+                self.entities = {}
+            case 'avro':
+                self.observation_agg = ObservationAggregator()
+
         print(f"Initialized OpticalFlowMeasure on device: {self.device}")
 
     @staticmethod
@@ -85,7 +98,8 @@ class OpticalFlowMeasure(Capability):
         super().start_stream(stream, stream_id)
         self.frame_idx = 0
         self.prev_frame_tensor = None
-        self.entities.clear()
+        if self.submission_strategy == 'legacy':
+            self.entities.clear()
         self.client = HLClient.get_client()
         self.entity_ids = {}
         self.track_ids = {}
@@ -153,14 +167,19 @@ class OpticalFlowMeasure(Capability):
             frame_entities = self.create_motion_entity(
                 stream, motion_magnitude, object_class_value["uuid"], df
             )
-            self.entities.update(frame_entities)
+            match self.submission_strategy:
+                case 'legacy':
+                    self.entities.update(frame_entities)
+                case 'avro':
+                    self.observation_agg.update_with_observations([o for e in frame_entities.values() for o in e.to_observations()])
+                    # self.observation_agg.update_with_observations(Entity.to_deprecated_entities(frame_entities).get_attributes())
 
         self.prev_frame_tensor = frame_tensor
         self.frame_idx += 1
 
         return StreamEvent.OKAY, {"entities": frame_entities}
 
-    def create_submission_from_entities(
+    def create_legacy_submission_from_entities(
         self,
         entities: Dict[UUID, Entity],
         data_file_id: UUID,
@@ -168,6 +187,18 @@ class OpticalFlowMeasure(Capability):
     ):
         annotations_attributes = []
         eavt_attributes = []
+        max = 0
+        for entity in entities.values():
+            for annotation in entity.annotations:
+                confidence = annotation.datum_source.confidence
+                if confidence > max:
+                    max = confidence
+
+        for entity in entities.values():
+            for annotation in entity.annotations:
+                extent = max - 0
+                annotation.datum_source.confidence = annotation.datum_source.confidence / extent
+
         for entity in entities.values():
             for annotation in entity.annotations:
                 annotations_attributes.append(annotation.gql_dict())
@@ -269,9 +300,44 @@ class OpticalFlowMeasure(Capability):
         Stop the stream and reset the state.
         """
         self.prev_frame_tensor = None
-        self.create_submission_from_entities(self.entities, stream.parameters['Source.data_sources'][0].id, stream.stream_id)
 
-        self.entities.clear()
+        task_id = stream.stream_id
+
+        match self.submission_strategy:
+            case 'legacy':
+                self.create_legacy_submission_from_entities(self.entities, stream.parameters['Source.data_sources'][0].id, task_id)
+                self.entities.clear()
+
+            case 'avro':
+                try:
+                    now_str = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+
+                    output_filename = f"{task_id}_{now_str}.avro"
+                    observation_writer = S3AvroObservationWriter(
+                            hl.ENTITY_AVRO_SCHEMA,
+                            output_filename,
+                            self.client,
+                            )
+
+                    shrine_file = self.observation_agg.write(observation_writer)
+
+                    _result = self.client.createSubmission(
+                        return_type=CreateSubmissionPayload,
+                        status="completed",
+                        taskId=task_id,
+                        backgroundInfoLayerFileData=shrine_file,
+                        imageUuid=str(stream.parameters['Source.data_sources'][0].id)
+                    )
+
+                    self.logger.debug(f"Uploaded avro for task {task_id} to {self.client.endpoint_url}")
+
+                except Exception as e:
+                    update_task_status(self.client,
+                                       task_id,
+                                       status=TaskStatus.FAILED,
+                                       message=str(e),
+                                       )
+                    return StreamEvent.ERROR, {"diagnostic": str(e)}
 
         print(f"Stopped stream {stream_id}. Reset state.") 
         return StreamEvent.OKAY, {}

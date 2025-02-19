@@ -162,7 +162,7 @@ class OpticalFlowMeasure(Capability):
         u, v = result[..., 0], result[..., 1]
         magnitude = np.sqrt(u**2 + v**2)
         motion_magnitude = np.sum(magnitude)
-        
+        print(motion_magnitude)
         for object_class_value in self.object_classes_for_inference.values():
             frame_entities = self.create_motion_entity(
                 stream, motion_magnitude, object_class_value["uuid"], df
@@ -194,11 +194,14 @@ class OpticalFlowMeasure(Capability):
                 if confidence > max:
                     max = confidence
 
+        raw_threshold = 0.7 * max
+        value_threshold = raw_threshold
+        breakpoint()
         for entity in entities.values():
             for annotation in entity.annotations:
                 extent = max - 0
                 annotation.datum_source.confidence = annotation.datum_source.confidence / extent
-
+        
         for entity in entities.values():
             for annotation in entity.annotations:
                 annotations_attributes.append(annotation.gql_dict())
@@ -207,7 +210,6 @@ class OpticalFlowMeasure(Capability):
                                             "annotationUuid": str(annotation.id)})
             for eavt in entity.global_observations:
                 eavt_attributes.append(eavt.gql_dict())
-
         result = self.client.createSubmission(
             return_type=CreateSubmissionPayload,
             imageUuid=str(data_file_id),
@@ -239,6 +241,7 @@ class OpticalFlowMeasure(Capability):
             4. Return the constructed motion entity for further processing or storage.
         Note: Confidence = motion_magnitude
         """
+        #if(motion_magnitude > 405071328.0):
         entities = {}
 
         entity_id = uuid4()
@@ -294,6 +297,8 @@ class OpticalFlowMeasure(Capability):
 
         entities[motion_entity.id] = motion_entity
         return entities
+        #else:
+        #    return {}
 
     def stop_stream(self, stream, stream_id) -> Tuple[StreamEvent, Dict[str, Any]]:
         """
@@ -310,6 +315,26 @@ class OpticalFlowMeasure(Capability):
 
             case 'avro':
                 try:
+                    
+                    
+                    max_confidence = 0
+                    for entity in self.observation_agg._result.values():
+                        for track in entity["tracks"]:
+                            for detection in track["detections"]:
+                                if detection["confidence"] > max_confidence:
+                                    max_confidence = detection["confidence"]
+
+                    if max_confidence == 0:
+                        print("Max confidence is 0, skip")
+                        return
+
+                    
+                    for entity in self.observation_agg._result.values():
+                        for track in entity["tracks"]:
+                            for detection in track["detections"]:
+                                normalized_confidence = detection["confidence"] / max_confidence 
+                                detection["confidence"] = normalized_confidence
+
                     now_str = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
                     output_filename = f"{task_id}_{now_str}.avro"
@@ -321,6 +346,7 @@ class OpticalFlowMeasure(Capability):
 
                     shrine_file = self.observation_agg.write(observation_writer)
 
+                    import json
                     _result = self.client.createSubmission(
                         return_type=CreateSubmissionPayload,
                         status="completed",
@@ -328,8 +354,10 @@ class OpticalFlowMeasure(Capability):
                         backgroundInfoLayerFileData=shrine_file,
                         imageUuid=str(stream.parameters['Source.data_sources'][0].id)
                     )
-
+                    
                     self.logger.debug(f"Uploaded avro for task {task_id} to {self.client.endpoint_url}")
+
+
 
                 except Exception as e:
                     update_task_status(self.client,
